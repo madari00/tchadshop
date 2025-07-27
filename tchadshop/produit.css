@@ -1,0 +1,61 @@
+.main-content{
+  margin-left: 1%;
+  margin-right: 1%;
+ 
+
+ 
+ 
+}
+.main-content h2{
+    color: rgb(173, 117, 164);
+}
+.main-content .btn1{
+    float: right;
+    text-decoration: none;
+    color: rgb(255, 255, 255);
+    background-color: blue;
+    border-radius: 5px;
+    font-size: 20px;
+    font-weight: bold;
+    height: 45px;
+    width: 24%;
+    text-align: center;
+    padding: 5px;
+   
+
+}
+.main-content table{
+    width: 100%;
+   border: 1px solid rgb(173, 117, 164);
+   text-align: center;
+    margin-top: 5%;
+   
+}
+.main-content table tr th{
+     color: rgb(255, 255, 255);
+     background-color: rgb(173, 117, 164);
+}
+tr .slider-img{
+    width: 80px;
+    height: 100px;
+    
+}
+tr td .slider-container{
+    margin-left: 35px;
+
+}
+.main-content table tbody tr td{
+    color: rgb(0, 0, 0);
+    font-size: 20px;
+    
+}
+.main-content table tbody tr td a{
+    
+    text-decoration: none;
+    background-color: blue;
+    border-radius: 6px;
+    color: white;
+    font-size: 20px;
+     
+
+}
