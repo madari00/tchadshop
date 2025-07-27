@@ -108,7 +108,7 @@ while ($row = $result->fetch_assoc()) {
 <body>
 <div class="content">
   <h2>🛍 Bienvenue sur TchadShop</h2>
-  <p>Commandez facilement depuis chez vous !</p>
+  <p>Commandez facilement depuis chez vous!</p>
 
   <div class="produits-container">
     <?php foreach ($produits as $index => $produit): ?>
