@@ -1476,6 +1476,12 @@ if ($result_tous_produits) {
     </style>
 </head>
 <body>
+<<<<<<< HEAD
+=======
+<div class="content">
+  <h2>🛍 Bienvenue sur TchadShop</h2>
+  <p>Commandez facilement depuis chez vous!</p>
+>>>>>>> ded8c060c21e08021168a2d7785d6bf3c25338c9
 
     <!-- SLIDER DE PROMOTIONS DYNAMIQUE -->
     <div class="container">
