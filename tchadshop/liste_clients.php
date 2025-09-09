@@ -8,13 +8,13 @@ if ($conn->connect_error) {
 
 // ✅ Lire tous les nouveaux clients
 if (isset($_GET['lire_tout'])) {
-    $conn->query("UPDATE clients SET vu = 1 WHERE vu = 0 AND invite = 0");
+    $conn->query("UPDATE clients SET vu = 1 WHERE vu = 0");
     header("Location: clients.php"); // redirige vers la liste globale
     exit();
 }
 
 // 🔥 Sélectionner les nouveaux clients (invite = 0 et vu = 0)
-$sql = "SELECT * FROM clients WHERE invite = 0 AND vu = 0 ORDER BY created_at DESC";
+$sql = "SELECT * FROM clients WHERE vu = 0 ORDER BY created_at DESC";
 $result = $conn->query($sql);
 ?>
 <!DOCTYPE html>
@@ -59,7 +59,7 @@ $result = $conn->query($sql);
                     <tr>
                         <td><?= $row['id'] ?></td>
                         <td><?= htmlspecialchars($row['nom']) ?></td>
-                        <td><?= htmlspecialchars($row['email']) ?></td>
+                        <td><?= htmlspecialchars($row['email'] ?? '') ? htmlspecialchars($row['email'] ?? '') : '------' ?></td>
                         <td><?= htmlspecialchars($row['telephone']) ?></td>
                         <td><?= $row['created_at'] ?></td>
                         

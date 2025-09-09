@@ -98,7 +98,7 @@ if (!empty($search)) {
             <tr>
                 <td><?= $client['id'] ?></td>
                 <td><?= htmlspecialchars($client['nom']) ?></td>
-                <td><?= htmlspecialchars($client['email'] ?? '') ?></td>
+                <td><?= htmlspecialchars($client['email'] ?? '') ? htmlspecialchars($client['email'] ?? '') : '------' ?></td>
                 <td><?= htmlspecialchars($client['telephone']) ?></td>
                 <td><?= $client['created_at'] ?></td>
                 <td>

@@ -41,9 +41,11 @@ $nouveauxClients = $conn->query("SELECT COUNT(*) AS total FROM clients WHERE vu 
 
 // 📉 Produits en rupture
 $produitsCritiques = $conn->query("SELECT COUNT(*) AS total FROM produits WHERE stock<= 5 AND vu=0")->fetch_assoc()['total'];
+//contact visiteurs
+$nonLusContact = $conn->query("SELECT COUNT(*) AS total FROM contacts WHERE vu = 0")->fetch_assoc()['total'];
 
 // 🔔 Total notifications
-$totalNotifications = $nonLusClients + $nonLusLivreurs + $nouvellesCommandes + $nouveauxClients + $produitsCritiques;
+$totalNotifications = $nonLusClients + $nonLusLivreurs + $nouvellesCommandes + $nouveauxClients + $produitsCritiques + $nonLusContact;
 
 
 
@@ -96,6 +98,7 @@ while ($logo_site_header = $resultat_logo_site->fetch_assoc()) {
     />
   </head>
   <style>
+    
     .d-flex .form-control{
           height: 50px;
     }
@@ -182,6 +185,14 @@ while ($logo_site_header = $resultat_logo_site->fetch_assoc()) {
     <i class="bx bx-chevron-down arrow"></i>
   </a>
   <ul class="sub-menu">
+    <li>
+      <a href="contact_visiteur.php">
+        <i class="bx bx-message"></i>Contact
+        <?php if ($nonLusContact > 0): ?>
+          <span class="badge"><?= $nonLusContact ?></span>
+        <?php endif; ?>
+      </a>
+    </li>
     <!-- Messages Clients -->
     <li>
       <a href="message_client.php">

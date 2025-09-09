@@ -1,8 +1,13 @@
 <?php
-session_start();
-$conn = new mysqli("localhost", "root", "", "tchadshop_db");
-if ($conn->connect_error) die("Erreur : " . $conn->connect_error);
-
+require_once 'init.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+// Vérifier si la connexion existe déjà (peut-être déjà établie par header.php)
+if (!isset($conn)) {
+    $conn = new mysqli("localhost", "root", "", "tchadshop_db");
+    if ($conn->connect_error) die("Erreur de connexion : " . $conn->connect_error);
+}
 $produit_id = intval($_GET['produit_id'] ?? 0);
 $message = "";
 
@@ -60,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="<?php echo $lang; ?>">
 <head>
     <meta charset="UTF-8">
     <title>Commander un produit</title>

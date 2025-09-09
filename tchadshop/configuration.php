@@ -5,6 +5,12 @@ $conn = new mysqli("localhost", "root", "", "tchadshop_db");
 if ($conn->connect_error) {
     die("Erreur de connexion : " . $conn->connect_error);
 }
+
+// Fonction pour obtenir l'URL du site client
+function getClientHomeUrl() {
+    return "http://localhost/AmmaShop/client/index.php";
+}
+
 if (isset($_POST['save_language'])) {
     $newLang = $_POST['default_language'];
     $stmt = $conn->prepare("UPDATE configuration SET valeur=? WHERE parametre='default_language'");
@@ -25,7 +31,6 @@ $current_lang = isset($_GET['lang']) ? $_GET['lang'] : $config['default_language
 $_SESSION['lang'] = $current_lang;
 
 $translations = include 'traductions.php';
-
 
 // Définir les textes en fonction de la langue
 $t = $translations[$current_lang];
@@ -77,8 +82,6 @@ $t = $translations[$current_lang];
             box-shadow: var(--shadow);
             overflow: hidden;
         }
-        
-       
         
         .logo {
             display: flex;
@@ -313,7 +316,21 @@ $t = $translations[$current_lang];
             font-size: 15px;
         }
         
-      
+        .client-access {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .client-access h3 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        .client-access p {
+            margin-bottom: 15px;
+            color: #666;
+        }
         
         /* Responsive */
         @media (max-width: 768px) {
@@ -321,7 +338,6 @@ $t = $translations[$current_lang];
                 flex-direction: column;
             }
             
-           
             .logo {
                 justify-content: center;
             }
@@ -347,7 +363,7 @@ $t = $translations[$current_lang];
             
             <div class="tabs">
                 <button class="tab-btn1 active" data-tab="general"><?php echo $t['general_settings']; ?></button>
-                <!--<button class="tab-btn1" data-tab="security"></button>-->
+                <button class="tab-btn1" data-tab="security"><?php echo $t['administrator_settings']; ?></button>
                 <button class="tab-btn1" data-tab="langue"><?php echo $t['language_settings']; ?></button>
                 <button class="tab-btn1" data-tab="avance"><?php echo $t['advanced_settings']; ?></button>
             </div>
@@ -381,7 +397,7 @@ $t = $translations[$current_lang];
         <h3>👮 Gestion des administrateurs</h3>
 
         <!-- Formulaire d'ajout -->
-        <form method="POST" action="admin_action.php" style="margin-bottom: 30px;">
+        <form method="POST" id="securityForm" action="admin_action.php" style="margin-bottom: 30px;">
             <input type="hidden" name="action" value="add">
             <div class="form-group">
                 <label>Nom</label>
@@ -435,8 +451,7 @@ $t = $translations[$current_lang];
     </div>
 </div>
 
-            
-            <!-- 🔥 Onglet Langue -->
+                <!-- 🔥 Onglet Langue -->
             <div class="tab-content" id="langue">
                 <div class="form-container">
                     <form id="langueForm">
@@ -482,6 +497,15 @@ $t = $translations[$current_lang];
 
                         <button type="submit" class="btn11 btn1-secondary">⚙️ <?php echo $t['save']; ?></button>
                     </form>
+                    
+                    <!-- Nouvelle section: Accès au site client -->
+                    <div class="client-access">
+                        <h3>🌐 Accès au site web côté client</h3>
+                        <p>Cliquez sur le bouton ci-dessous pour accéder à la page d'accueil du site client. Vous serez redirigé en conservant votre session d'administration.</p>
+                        <a href="<?php echo getClientHomeUrl(); ?>" target="_blank" class="btn11 btn1-primary" style="text-decoration: none; display: inline-block;">
+                            🌐 Accéder au site client
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

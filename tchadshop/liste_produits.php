@@ -61,7 +61,7 @@ $result = $conn->query($sql);
                         <td><?= $row['stock'] ?></td>
                         <td><?= number_format($row['prix'], 2) ?></td>
                         <td>
-                            <a href="voir_produit.php?id=<?= $row['id'] ?>" class="btn1 view-btn">👁 Voir</a>
+                            <a href="details_produit.php?id=<?= $row['id'] ?>" class="btn1 view-btn">👁 Voir</a>
                             <a href="modifier_produit.php?id=<?= $row['id'] ?>" class="btn1 edit-btn">✏ Modifier</a>
                             <a href="supprimer_produit.php?id=<?= $row['id'] ?>" class="btn1 delete-btn" onclick="return confirm('⚠ Supprimer ce produit ?');">🗑 Supprimer</a>
                         </td>

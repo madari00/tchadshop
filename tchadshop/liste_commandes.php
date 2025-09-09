@@ -91,7 +91,7 @@ $result = $conn->query($sql);
                         </td>
                         <td><?= $row['date_commande'] ?></td>
                         <td>
-                            <a href="voir_commande.php?id=<?= $row['id'] ?>" class="btn1 view-btn">👁 Voir</a>
+                            <a href="details_commande.php?id=<?= $row['id'] ?>" class="btn1 view-btn">👁 Voir</a>
                             <a href="modifier_commande.php?id=<?= $row['id'] ?>" class="btn1 edit-btn">✏ Modifier</a>
                             <a href="supprimer_commande.php?id=<?= $row['id'] ?>" class="btn1 delete-btn" onclick="return confirm('⚠ Supprimer cette commande ?');">🗑 Supprimer</a>
                         </td>

@@ -33,10 +33,18 @@ if (in_array($filtre_statut, ['livré', 'échec'])) {
 
 // search sur client ou livreur
 if ($search !== '') {
-    $where .= " AND (cl.nom LIKE ? OR l.nom LIKE ?)";
+    $where .= " AND (cl.nom LIKE ? OR l.nom LIKE ? OR c.id = ?)";
     $params[] = "%$search%";
     $params[] = "%$search%";
-    $types .= "ss";
+    
+    // Si la recherche est numérique, chercher aussi par ID de commande
+    if (is_numeric($search)) {
+        $params[] = $search;
+        $types .= "ssi";
+    } else {
+        $params[] = "%$search%";
+        $types .= "sss";
+    }
 }
 
 // Date début
@@ -99,25 +107,69 @@ $result = $stmt->get_result();
     <meta charset="UTF-8">
     <title>Historique des Livraisons</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { background: #6a1b9a; color: #fff; }
-        .btn1 {
-            display: inline-block; padding: 5px 10px; background-color: #007bff;
-            color: white; border-radius: 4px; text-decoration: none; font-size: 14px;
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
         }
-        .btn1:hover { background-color: #0056b3; }
-        .livré { color: green; font-weight: bold; }
-        .échec { color: red; font-weight: bold; }
+        .home-content {
+            padding: 20px;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: center; 
+        }
+        th { 
+            background: #6a1b9a; 
+            color: #fff; 
+            position: sticky;
+            top: 0;
+        }
+        .btn1 {
+            display: inline-block; 
+            padding: 8px 12px; 
+            background-color: #007bff;
+            color: white; 
+            border-radius: 4px; 
+            text-decoration: none; 
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        .btn1:hover { 
+            background-color: #0056b3; 
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .livré { 
+            color: green; 
+            font-weight: bold; 
+        }
+        .échec { 
+            color: red; 
+            font-weight: bold; 
+        }
         form.filters {
-            text-align: center;
-            margin: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin: 20px 0;
         }
         form.filters input, form.filters select {
-            padding: 5px;
-            margin-right: 10px;
+            padding: 10px;
+            margin: 0 10px 10px 0;
             font-size: 14px;
+            border: 2px solid #6a1b9a;
+            border-radius: 4px;
         }
         .pagination {
             margin-top: 20px;
@@ -125,40 +177,109 @@ $result = $stmt->get_result();
         }
         .pagination a, .pagination span {
             display: inline-block;
-            padding: 6px 12px;
-            margin: 0 2px;
+            padding: 8px 16px;
+            margin: 0 4px;
             border: 1px solid #ddd;
             color: #007bff;
             text-decoration: none;
             border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .pagination a:hover {
+            background-color: #f0f0f0;
         }
         .pagination span.current {
-            background-color: #007bff;
+            background-color: #6a1b9a;
             color: white;
-            border-color: #007bff;
+            border-color: #6a1b9a;
             cursor: default;
         }
-        h2 { color: #6a1b9a; margin: 20px; }
-        .filters label { color: blue; font-size: 20px; }
-        .select, .filters input {
-            border: 3px solid rgb(212, 54, 244);
+        h2 { 
+            color: #6a1b9a; 
+            margin: 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #6a1b9a;
+        }
+        .filters label { 
+            font-weight: bold;
+            margin-right: 10px;
+            color: #333;
+        }
+        .select, .filters input[type="date"], .filters input[type="text"] {
+            border: 2px solid #6a1b9a;
+            border-radius: 4px;
+            padding: 8px;
         }
         .button {
-            background: rgb(212, 54, 244);
-            width: 100px;
-            height: 30px;
+            background: #6a1b9a;
+            padding: 10px 20px;
             border: none;
             color: white;
-            font-size: 20px;
-            border-radius: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .button:hover {
+            background: #5a0b8a;
         }
         .badge-invite {
             background: purple;
             color: white;
             font-size: 11px;
-            padding: 2px 5px;
-            border-radius: 4px;
+            padding: 3px 8px;
+            border-radius: 12px;
             margin-left: 5px;
+        }
+       
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .stat-box {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f0f0f0;
+            flex: 1;
+            margin: 0 10px;
+        }
+        .stat-box h3 {
+            margin: 0;
+            color: #6a1b9a;
+        }
+        .stat-box p {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0 0;
+        }
+        .export-btn {
+            background: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f0f0f0;
         }
     </style>
 </head>
@@ -167,17 +288,57 @@ $result = $stmt->get_result();
     <div class="home-content">
         <h2>📜 Historique des Livraisons</h2>
 
-        <form method="get" class="filters">
-            <select name="statut" class="select">
-                <option value="">Tous statuts</option>
-                <option value="livré" <?= $filtre_statut === 'livré' ? 'selected' : '' ?>>Livré</option>
-                <option value="échec" <?= $filtre_statut === 'échec' ? 'selected' : '' ?>>Échec</option>
-            </select>
-            <label>Date début : <input type="date" name="date_debut" value="<?= safe($date_debut) ?>"></label>
-            <label>Date fin : <input type="date" name="date_fin" value="<?= safe($date_fin) ?>"></label>
-            <button type="submit" class="button">Filtrer</button>
-            <a href="historique_livraison.php" class="btn1" style="background-color:#6c757d;">Réinitialiser</a>
-        </form>
+        <!-- Statistiques rapides -->
+        <div class="stats">
+            <div class="stat-box">
+                <h3>Total Commandes</h3>
+                <p><?= $total_commandes ?></p>
+            </div>
+            <div class="stat-box">
+                <h3>Commandes Livrées</h3>
+                <p>
+                    <?php
+                    $sql_livree = "SELECT COUNT(*) FROM commandes WHERE statut = 'livré'";
+                    $result_livree = $conn->query($sql_livree);
+                    echo $result_livree->fetch_row()[0];
+                    ?>
+                </p>
+            </div>
+            <div class="stat-box">
+                <h3>Commandes Échouées</h3>
+                <p>
+                    <?php
+                    $sql_echec = "SELECT COUNT(*) FROM commandes WHERE statut = 'échec'";
+                    $result_echec = $conn->query($sql_echec);
+                    echo $result_echec->fetch_row()[0];
+                    ?>
+                </p>
+            </div>
+        </div>
+
+        <div class="filter-header">
+            <form method="get" class="filters">
+                <div>
+                    <label>Statut:
+                    <select name="statut" class="select">
+                        <option value="">Tous statuts</option>
+                        <option value="livré" <?= $filtre_statut === 'livré' ? 'selected' : '' ?>>Livré</option>
+                        <option value="échec" <?= $filtre_statut === 'échec' ? 'selected' : '' ?>>Échec</option>
+                    </select>
+                    </label>
+                    
+                    <label>Date début: <input type="date" name="date_debut" value="<?= safe($date_debut) ?>"></label>
+                    <label>Date fin: <input type="date" name="date_fin" value="<?= safe($date_fin) ?>"></label>
+                 
+                  
+                    <button type="submit" class="button">Filtrer</button>
+                    <a href="historique_livraison.php" class="btn1" style="background-color:#6c757d;">Réinitialiser</a>
+                
+                </div>
+                
+                
+            </form>
+        </div>
 
         <table>
             <thead>
@@ -204,7 +365,7 @@ $result = $stmt->get_result();
                                 <?php endif; ?>
                             </td>
                             <td><?= safe($commande['livreur_nom'] ?? 'Non assigné') ?></td>
-                            <td><?= safe($commande['date_commande']) ?></td>
+                            <td><?= date('d/m/Y H:i', strtotime($commande['date_commande'])) ?></td>
                             <td class="<?= $commande['statut'] === 'livré' ? 'livré' : 'échec' ?>">
                                 <?= ucfirst($commande['statut']) ?>
                             </td>
@@ -226,12 +387,17 @@ $result = $stmt->get_result();
                         </tr>
                     <?php endwhile; ?>
                 <?php else: ?>
-                    <tr><td colspan="8">Aucune livraison trouvée.</td></tr>
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 20px;">
+                            Aucune livraison trouvée avec les filtres actuels.
+                        </td>
+                    </tr>
                 <?php endif; ?>
             </tbody>
         </table>
 
         <!-- Pagination -->
+        <?php if ($total_pages > 1): ?>
         <div class="pagination">
             <?php if ($page > 1): ?>
                 <a href="?<?= http_build_query(array_merge($_GET, ['page' => $page - 1])) ?>">&laquo; Précédent</a>
@@ -249,6 +415,7 @@ $result = $stmt->get_result();
                 <a href="?<?= http_build_query(array_merge($_GET, ['page' => $page + 1])) ?>">Suivant &raquo;</a>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
     </div>
 </body>
 </html>

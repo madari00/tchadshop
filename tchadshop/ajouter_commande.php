@@ -78,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $produit_id = intval($produit_id);
             $quantite = intval($_POST['quantite'][$index] ?? 0);
             $prix = floatval($_POST['prix'][$index] ?? 0);
+            $promotion = isset($_POST['promotion'][$index]) ? 1 : 0; // Nouveau: état de promotion
             
             if ($produit_id > 0 && $quantite > 0 && $prix > 0) {
                 // Vérifier que le produit existe
@@ -91,6 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'id' => $produit_id,
                             'quantite' => $quantite,
                             'prix' => $prix,
+                            'promotion' => $promotion, // Nouveau: état de promotion
                             'stock' => $produit['stock']
                         ];
                     } else {
@@ -125,8 +127,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Insérer les détails de la commande et mettre à jour le stock
                 foreach ($produits_data as $produit) {
-                    $insert_detail = "INSERT INTO details_commandes (commande_id, produit_id, quantite, prix_unitaire) 
-                                      VALUES ($commande_id, {$produit['id']}, {$produit['quantite']}, {$produit['prix']})";
+                    // Nouveau: inclure l'état de promotion dans l'insertion
+                    $insert_detail = "INSERT INTO details_commandes (commande_id, produit_id, quantite, prix_unitaire, promotion) 
+                                      VALUES ($commande_id, {$produit['id']}, {$produit['quantite']}, {$produit['prix']}, {$produit['promotion']})";
                     
                     if (!$conn->query($insert_detail)) {
                         throw new Exception("Erreur lors de l'insertion du détail de commande: " . $conn->error);
@@ -158,7 +161,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
+// Nouveau: récupérer les informations de promotion des produits
+$produits = $conn->query("
+    SELECT 
+        id, 
+        nom, 
+        prix, 
+        stock, 
+        promotion, 
+        prix_promotion,
+        date_debut_promo,
+        date_fin_promo,
+        CASE 
+            WHEN promotion > 0 AND date_debut_promo <= CURDATE() AND date_fin_promo >= CURDATE() THEN 1
+            ELSE 0
+        END AS est_en_promotion,
+        CASE 
+            WHEN promotion > 0 AND date_debut_promo <= CURDATE() AND date_fin_promo >= CURDATE() THEN prix_promotion
+            ELSE prix
+        END AS prix_actuel
+    FROM produits
+");
 ?>
 
 <!DOCTYPE html>
@@ -197,6 +220,14 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
             background: white;
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
         }
         
         #message {
@@ -256,7 +287,7 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
         
         .produit-line {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
             gap: 15px;
             align-items: center;
             padding: 15px;
@@ -278,17 +309,17 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
             border: none;
         }
         
-        .btn-primary {
+        .btn1-primary {
             background-color: var(--primary);
             color: white;
         }
         
-        .btn-primary:hover {
+        .btn1-primary:hover {
             background-color: #581c87;
             transform: translateY(-2px);
         }
         
-        .btn-success {
+        .btn1-success {
             background-color: var(--success);
             color: white;
             padding: 12px 25px;
@@ -299,13 +330,13 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
             margin: 20px auto;
         }
         
-        .btn-success:hover {
+        .btn1-success:hover {
             background-color: #218838;
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
         }
         
-        .btn-danger {
+        .btn1-danger {
             background-color: var(--danger);
             color: white;
             padding: 5px 10px;
@@ -384,6 +415,38 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
             flex: 1;
         }
         
+        .promo-badge {
+            background-color: var(--danger);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        
+        .promo-price {
+            color: var(--danger);
+            font-weight: bold;
+        }
+        
+        .original-price {
+            text-decoration: line-through;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .promo-checkbox {
+            width: auto !important;
+            margin-top: 10px;
+        }
+        
+        .promo-label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+            margin-top: 5px;
+        }
+        
         @media (max-width: 768px) {
             .produit-line {
                 grid-template-columns: 1fr;
@@ -402,6 +465,7 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
 <body>
     <?php include("header.php"); ?>
     <div class="home-content">
+        <div class="container">
         <div class="content">
             <h2 style="text-align: center; color: var(--primary); margin-bottom: 25px;">
                 <i class="bx bx-task"></i> Ajouter une commande
@@ -486,18 +550,41 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
                         </div>
                     </div>
 
+                   
                     <div class="form-section">
                         <div class="section-title">Produits</div>
-                        
+
+                        <div class="form-group">
+                            <label for="search-produit">Rechercher un produit :</label>
+                            <input type="text" id="search-produit" placeholder="Tapez le nom d'un produit..." oninput="filterProduits()">
+                        </div>
+
                         <div id="produits">
                             <div class="produit-line">
                                 <div>
                                     <label>Produit :</label>
-                                    <select name="produit_id[]" onchange="updatePrix(this)" required>
+                                    <select name="produit_id[]" class="produit-select" onchange="updatePrix(this)" required>
                                         <option value="">-- Sélectionner un produit --</option>
-                                        <?php while ($p = $produits->fetch_assoc()): ?>
-                                            <option value="<?= $p['id'] ?>" data-prix="<?= $p['prix'] ?>">
+                                        <?php 
+                                            // Réinitialiser le pointeur de la requête pour la boucle suivante
+                                            if ($produits->num_rows > 0) {
+                                                $produits->data_seek(0);
+                                            }
+                                            while ($p = $produits->fetch_assoc()): 
+                                                $en_promotion = $p['est_en_promotion'] == 1;
+                                                $prix_affichage = $en_promotion ? $p['prix_promotion'] : $p['prix'];
+                                        ?>
+                                            <option 
+                                                value="<?= $p['id'] ?>" 
+                                                data-prix="<?= $prix_affichage ?>" 
+                                                data-prix-original="<?= $p['prix'] ?>"
+                                                data-promotion="<?= $en_promotion ? 1 : 0 ?>"
+                                                data-prix-promo="<?= $p['prix_promotion'] ?>"
+                                                data-nom="<?= htmlspecialchars($p['nom']) ?>">
                                                 <?= htmlspecialchars($p['nom']) ?> (Stock: <?= $p['stock'] ?>)
+                                                <?php if ($en_promotion): ?>
+                                                    <span class="promo-badge">PROMO -<?= $p['promotion'] ?>%</span>
+                                                <?php endif; ?>
                                             </option>
                                         <?php endwhile; ?>
                                     </select>
@@ -511,16 +598,25 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
                                 <div>
                                     <label>Prix unitaire :</label>
                                     <input type="number" name="prix[]" step="0.01" readonly required>
+                                    <div class="prix_original_display" style="font-size: 0.8em; color: #6c757d;"></div>
                                 </div>
                                 
-                                <button type="button" class="btn1 btn-danger" onclick="removeProduit(this)" style="display: none;">×</button>
+                                <div>
+                                    <label class="promo-label">
+                                        <input type="checkbox" name="promotion[]" class="promo-checkbox" value="1" onchange="togglePromoPrice(this)">
+                                        Appliquer promotion
+                                    </label>
+                                </div>
+                                
+                                <button type="button" class="btn1 btn1-danger" onclick="removeProduit(this)" style="display: none;">×</button>
                             </div>
                         </div>
                         
-                        <button type="button" class="btn1 btn-primary" onclick="addProduit()">
+                        <button type="button" class="btn1 btn1-primary" onclick="addProduit()">
                             + Ajouter un autre produit
                         </button>
                     </div>
+
 
                     <div class="total-container">
                         <div style="font-weight: bold; margin-bottom: 10px;">Montant total :</div>
@@ -529,7 +625,7 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
                     </div>
                     
                     <div class="button-container">
-                        <button type="submit" class="btn1 btn-success" name="submit_commande">Enregistrer la commande</button>
+                        <button type="submit" class="btn1 btn1-success" name="submit_commande">Enregistrer la commande</button>
                     </div>
                 </form>
 
@@ -583,7 +679,7 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
             .catch(error => {
                 resultDiv.innerHTML = "❌ Erreur lors de la recherche";
                 resultDiv.style.backgroundColor = '#f8d7da';
-                resultDiv.style.color = '#721c24';
+                    resultDiv.style.color = '#721c24';
                 console.error('Erreur:', error);
             });
         } else {
@@ -603,14 +699,16 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
         newProduit.querySelector('select').selectedIndex = 0;
         newProduit.querySelector('input[name="quantite[]"]').value = 1;
         newProduit.querySelector('input[name="prix[]"]').value = '';
-        newProduit.querySelector('.btn-danger').style.display = 'block';
+        newProduit.querySelector('.btn1-danger').style.display = 'block';
+        newProduit.querySelector('#prix_original_display').innerHTML = '';
+        newProduit.querySelector('input[type="checkbox"]').checked = false;
         
         container.appendChild(newProduit);
         updateMontantTotal();
     }
 
-    function removeProduit(btn) {
-        const produitLine = btn.closest('.produit-line');
+    function removeProduit(btn1) {
+        const produitLine = btn1.closest('.produit-line');
         if (document.querySelectorAll('.produit-line').length > 1) {
             produitLine.remove();
             updateMontantTotal();
@@ -620,8 +718,24 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
     function updatePrix(select) {
         const selected = select.options[select.selectedIndex];
         const prix = selected.dataset.prix || 0;
+        const prixOriginal = selected.dataset.prixOriginal || 0;
+        const enPromotion = selected.dataset.promotion == 1;
         const ligne = select.closest('.produit-line');
+        
         ligne.querySelector('input[name="prix[]"]').value = prix;
+        
+        // Afficher le prix original si différent du prix actuel
+        const prixOriginalDisplay = ligne.querySelector('#prix_original_display');
+        if (enPromotion && prix != prixOriginal) {
+            prixOriginalDisplay.innerHTML = '<span class="original-price">' + prixOriginal + ' FCFA</span>';
+        } else {
+            prixOriginalDisplay.innerHTML = '';
+        }
+        
+        // Cocher automatiquement la case promotion si le produit est en promotion
+        const checkbox = ligne.querySelector('input[type="checkbox"]');
+        checkbox.checked = enPromotion;
+        
         updateMontantTotal();
     }
 
@@ -636,6 +750,33 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
         document.getElementById('montant_total_text').textContent = total.toFixed(2) + ' FCFA';
         document.getElementById('montant_total').value = total.toFixed(2);
     }
+
+    // Gérer les changements sur les cases à cocher de promotion
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.matches('.promo-checkbox')) {
+            const ligne = e.target.closest('.produit-line');
+            const select = ligne.querySelector('select');
+            const selected = select.options[select.selectedIndex];
+            
+            if (selected.value) {
+                const prixOriginal = selected.dataset.prixOriginal || 0;
+                const prixPromo = selected.dataset.prixPromo || 0;
+                const prixActuel = e.target.checked ? prixPromo : prixOriginal;
+                
+                ligne.querySelector('input[name="prix[]"]').value = prixActuel;
+                
+                // Mettre à jour l'affichage du prix original
+                const prixOriginalDisplay = ligne.querySelector('#prix_original_display');
+                if (e.target.checked && prixPromo != prixOriginal) {
+                    prixOriginalDisplay.innerHTML = '<span class="original-price">' + prixOriginal + ' FCFA</span>';
+                } else {
+                    prixOriginalDisplay.innerHTML = '';
+                }
+                
+                updateMontantTotal();
+            }
+        }
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
         // Initialisation
@@ -675,12 +816,107 @@ $produits = $conn->query("SELECT id, nom, prix, stock FROM produits");
                 e.preventDefault();
             } else {
                 // Afficher un indicateur de chargement
-                const submitBtn = document.querySelector('button[name="submit_commande"]');
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="bx bx-loader bx-spin"></i> Enregistrement...';
+                const submitbtn1 = document.querySelector('button[name="submit_commande"]');
+                submitbtn1.disabled = true;
+                submitbtn1.innerHTML = '<i class="bx bx-loader bx-spin"></i> Enregistrement...';
             }
         });
     });
+    // Fonction pour filtrer les produits en fonction de la saisie
+function filterProduits() {
+    const searchTerm = document.getElementById('search-produit').value.toLowerCase();
+    const selectElements = document.querySelectorAll('.produit-select');
+
+    selectElements.forEach(select => {
+        const options = select.options;
+        for (let i = 0; i < options.length; i++) {
+            const option = options[i];
+            const productName = option.dataset.nom ? option.dataset.nom.toLowerCase() : '';
+            
+            // Si le nom du produit contient le terme de recherche, ou s'il s'agit de l'option par défaut, l'afficher
+            if (productName.includes(searchTerm) || option.value === "") {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        }
+    });
+}
+
+// Gérer la mise à jour du prix lorsqu'on coche/décoche la promotion
+function togglePromoPrice(checkbox) {
+    const ligne = checkbox.closest('.produit-line');
+    const select = ligne.querySelector('.produit-select');
+    const selected = select.options[select.selectedIndex];
+    
+    if (selected.value) {
+        const prixOriginal = selected.dataset.prixOriginal || 0;
+        const prixPromo = selected.dataset.prixPromo || 0;
+        const prixActuel = checkbox.checked ? prixPromo : prixOriginal;
+        
+        const prixInput = ligne.querySelector('input[name="prix[]"]');
+        prixInput.value = prixActuel;
+        
+        // Mettre à jour l'affichage du prix original
+        const prixOriginalDisplay = ligne.querySelector('.prix_original_display');
+        if (checkbox.checked && prixPromo != prixOriginal) {
+            prixOriginalDisplay.innerHTML = '<span class="original-price">' + parseFloat(prixOriginal).toFixed(2) + ' FCFA</span>';
+        } else {
+            prixOriginalDisplay.innerHTML = '';
+        }
+        
+        updateMontantTotal();
+    }
+}
+
+
+// Mettre à jour la fonction `addProduit`
+function addProduit() {
+    const container = document.getElementById('produits');
+    const firstProduit = container.children[0];
+    const newProduit = firstProduit.cloneNode(true);
+    
+    // Réinitialiser les valeurs
+    newProduit.querySelector('select').selectedIndex = 0;
+    newProduit.querySelector('input[name="quantite[]"]').value = 1;
+    newProduit.querySelector('input[name="prix[]"]').value = '';
+    newProduit.querySelector('.btn1-danger').style.display = 'block';
+    newProduit.querySelector('.prix_original_display').innerHTML = ''; // Utilisez la classe
+    newProduit.querySelector('input[type="checkbox"]').checked = false;
+    
+    // Ajouter l'écouteur d'événement sur le nouveau checkbox
+    newProduit.querySelector('.promo-checkbox').onchange = function() {
+        togglePromoPrice(this);
+    };
+
+    container.appendChild(newProduit);
+    updateMontantTotal();
+}
+
+// Mettre à jour la fonction `updatePrix`
+function updatePrix(select) {
+    const selected = select.options[select.selectedIndex];
+    const prix = selected.dataset.prix || 0;
+    const prixOriginal = selected.dataset.prixOriginal || 0;
+    const enPromotion = selected.dataset.promotion == 1;
+    const ligne = select.closest('.produit-line');
+    
+    ligne.querySelector('input[name="prix[]"]').value = prix;
+    
+    // Afficher le prix original si différent du prix actuel
+    const prixOriginalDisplay = ligne.querySelector('.prix_original_display');
+    if (enPromotion && prix != prixOriginal) {
+        prixOriginalDisplay.innerHTML = '<span class="original-price">' + parseFloat(prixOriginal).toFixed(2) + ' FCFA</span>';
+    } else {
+        prixOriginalDisplay.innerHTML = '';
+    }
+    
+    // Cocher automatiquement la case promotion si le produit est en promotion
+    const checkbox = ligne.querySelector('input[type="checkbox"]');
+    checkbox.checked = enPromotion;
+    
+    updateMontantTotal();
+}
     </script>
 </body>
 </html>

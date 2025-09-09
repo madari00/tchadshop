@@ -3,6 +3,7 @@ session_start();
 
 // Vérifier si l'utilisateur est déjà connecté
 if (isset($_SESSION['admin_id'])) {
+    $_SESSION['admin_id'] = $admin_id;
     header('Location: tableau_bord.php');
     exit();
 }
